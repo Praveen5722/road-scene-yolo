@@ -1,5 +1,8 @@
+ultralytics>=8.3
+opencv-python-headless>=4.8
 numpy
-opencv-python
-Pillow
+pandas
+matplotlib
+streamlit>=1.35
+lap
 pytest
-ultralytics
