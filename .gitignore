@@ -1,10 +1,11 @@
 __pycache__/
-*.py[cod]
+*.pyc
 .venv/
-env/
-*.pt
-*.onnx
+.ipynb_checkpoints/
 runs/
 datasets/
+*.pt
+*.onnx
+annotated.mp4
+.pytest_cache/
 .DS_Store
-.ipynb_checkpoints/
