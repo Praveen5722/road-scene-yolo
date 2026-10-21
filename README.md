@@ -1,127 +1,141 @@
-# 🚗 Intelligent Road Scene Understanding with YOLOv8
+# Computer-Aided Medical Image Diagnosis using Regularized Convolutional Neural Networks
 
-Real-time road-scene object detection and scene understanding using YOLOv8, with a Streamlit web UI and CLI tools for image/video inference, evaluation, and fine-tuning.
+An educational research prototype that classifies labeled medical images using a custom CNN with dropout, batch normalization, data augmentation, AdamW weight decay, and early stopping. Includes a Streamlit image-upload interface, training script, checkpointing, and unit tests.
+
+> **Safety notice:** This is not a clinically validated medical device. Predictions are research outputs only and must not be used to diagnose, treat, or rule out a medical condition. Consult a qualified healthcare professional.
 
 ## Features
 
-- Detects road-related classes such as cars, buses, trucks, people, cyclists, traffic lights, and stop signs.
-- Rule-based scene understanding: left / ahead / right, near / far, and hazard alerts.
-- Image and video inference with annotated outputs.
-- Streamlit web application.
-- CLI scripts for inference, evaluation, and training.
-- Unit tests and GitHub Actions CI.
+- Regularized CNN with three convolutional blocks.
+- Dropout / spatial dropout and batch normalization.
+- AdamW optimizer with configurable weight decay.
+- Image augmentation and validation-loss early stopping.
+- Saves the best validation checkpoint and training history.
+- Streamlit UI for image upload and class-score visualization.
+- Pytest unit tests and architecture notes.
 
 ## Project structure
 
 ```text
 road-scene-yolo/
-├── app.py
-├── road_scene/
-│   ├── config.py
-│   ├── detector.py
-│   ├── scene.py
-│   ├── schema.py
-│   └── video.py
+├── medical_app.py
+├── medical_cnn/
+│   ├── __init__.py
+│   └── model.py
 ├── scripts/
-│   ├── run_image.py
-│   ├── run_video.py
-│   ├── evaluate.py
-│   ├── train.py
-│   └── make_assets.py
-├── notebooks/
+│   └── train_medical.py
 ├── tests/
-├── assets/
+│   └── test_medical_model.py
 ├── docs/
-├── requirements.txt
-└── LICENSE
+│   └── medical-cnn-architecture.md
+├── data/
+│   └── medical_images/
+│       ├── train/<class_name>/
+│       └── val/<class_name>/
+├── artifacts/                 # generated checkpoints (do not commit)
+└── requirements-medical.txt
 ```
 
-## Quick start
+The original road-scene YOLOv8 implementation remains on the `main` branch. This medical-image implementation is on the `medical-image-diagnosis` branch for review.
+
+## Setup
+
+Python 3.10 or newer is recommended.
 
 ```bash
 git clone https://github.com/Praveen5722/road-scene-yolo.git
 cd road-scene-yolo
+git checkout medical-image-diagnosis
 python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\\Scripts\\activate
-pip install -r requirements.txt
 ```
 
-### Streamlit app
+Activate the environment:
 
 ```bash
-streamlit run app.py
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# Linux / macOS
+source .venv/bin/activate
 ```
 
-YOLO weights such as `yolov8n.pt` are downloaded automatically by Ultralytics when first used and are intentionally excluded from Git.
-
-### Image inference
+Install dependencies:
 
 ```bash
-python scripts/run_image.py --input assets/sample_street.jpg --output annotated.jpg --zones
+python -m pip install --upgrade pip
+pip install -r requirements-medical.txt
 ```
 
-### Video inference
+## Prepare the dataset
 
-```bash
-python scripts/run_video.py --input road.mp4 --output annotated.mp4 --unique
-```
-
-### Evaluation
-
-```bash
-python scripts/evaluate.py --data coco8.yaml
-```
-
-### Training
-
-The repository contains the training pipeline, but the original ZIP does **not** contain a complete annotated YOLO training dataset. Supply your own dataset and `data.yaml` before training:
-
-```bash
-python scripts/train.py --data data.yaml --epochs 50 --imgsz 640
-```
-
-A typical YOLO dataset is:
+Use a properly licensed, de-identified dataset suitable for your research objective. Organize images into class-named directories:
 
 ```text
-dataset/
-├── images/
-│   ├── train/
-│   └── val/
-├── labels/
-│   ├── train/
-│   └── val/
-└── data.yaml
+data/medical_images/
+├── train/
+│   ├── class_a/
+│   └── class_b/
+└── val/
+    ├── class_a/
+    └── class_b/
 ```
 
-## Testing
+Replace `class_a` and `class_b` with the dataset's real label names. Train and validation folders must have the same class directories. Do not use this example as a claim that any particular dataset or disease is supported by default.
+
+**Avoid data leakage:** where patient identifiers are available, split data by patient, not by individual image. Keep a separate held-out test set for final evaluation. Never upload identifiable medical images to public repositories.
+
+## Train
 
 ```bash
-pytest -q
+python scripts/train_medical.py --data data/medical_images --epochs 20 --batch-size 32 --weight-decay 0.0001 --dropout 0.4
 ```
 
-The scene-logic tests run offline. The detector integration test skips automatically when model weights are unavailable.
+The best checkpoint is saved to `artifacts/medical_cnn.pt`, with a history file at `artifacts/medical_cnn.history.json`. The script selects the checkpoint with the lowest validation loss and supports early stopping. It automatically uses CUDA when available, otherwise CPU.
+
+## Run the web app
+
+After training:
+
+```bash
+streamlit run medical_app.py
+```
+
+Upload a supported PNG, JPG, JPEG, or BMP image. The app displays the highest-scoring dataset label and the model's class scores. Scores are not calibrated clinical probabilities and are not evidence of diagnostic accuracy.
+
+## Tests
+
+```bash
+pytest -q tests/test_medical_model.py
+```
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    A[Image / Video] --> B[YOLOv8]
-    B --> C[Road-class filtering]
-    C --> D[Scene analysis]
-    D --> E[Zones / Distance / Alerts]
-    E --> F[Streamlit UI or CLI output]
+flowchart TD
+    A[De-identified labeled image] --> B[Resize and normalize]
+    B --> C[Convolution + BatchNorm + ReLU]
+    C --> D[Pooling + Dropout]
+    D --> E[Repeated CNN blocks]
+    E --> F[Global average pooling]
+    F --> G[Dense layer + Dropout]
+    G --> H[Class scores]
+    H --> I[Research visualization]
 ```
 
-## Limitations
+See [docs/medical-cnn-architecture.md](docs/medical-cnn-architecture.md) for details.
 
-Distance is estimated from image geometry rather than a depth sensor. This is an educational prototype and is **not a safety-critical driving system**.
+## Evaluation guidance
+
+For a meaningful research report, evaluate on a patient-independent held-out test set and report class-wise precision, recall, F1-score, confusion matrix, sensitivity, specificity, calibration, confidence intervals, and subgroup performance. Compare with a simple baseline and document dataset limitations. Do not invent or claim performance numbers before running experiments.
+
+## Limitations and responsible use
+
+- The model is trained from scratch and requires a suitable labeled dataset.
+- Performance depends on data quality, population, imaging modality, labels, and acquisition conditions.
+- A softmax score is not a calibrated probability of disease.
+- The prototype has not undergone clinical validation, regulatory review, or prospective testing.
+- Use appropriate data governance, ethics approval, and privacy safeguards for real medical data.
 
 ## License
 
-This project is released under the MIT License. See `LICENSE`.
-
-Ultralytics YOLO has its own licensing terms; review the applicable Ultralytics license before commercial distribution.
-
-## Credits
-
-Built with Python, Ultralytics YOLO, OpenCV, NumPy, Pandas, Matplotlib, and Streamlit.
+The repository's existing license applies subject to its terms. Verify dataset and dependency licenses before redistribution or commercial use.
