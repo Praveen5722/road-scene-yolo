@@ -1,0 +1,5 @@
+torch>=2.2
+torchvision>=0.17
+streamlit>=1.32
+Pillow>=10.0
+pytest>=8.0
